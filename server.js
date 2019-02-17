@@ -1,6 +1,7 @@
 'use strict';
 
 var express = require('express');
+var bodyParser = require('body-parser');
 var mongo = require('mongodb');
 var mongoose = require('mongoose');
 
@@ -19,6 +20,7 @@ app.use(cors());
 
 /** this project needs to parse POST bodies **/
 // you should mount the body-parser here
+app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -29,6 +31,11 @@ app.get('/', function(req, res) {
 // your first API endpoint...
 app.get('/api/hello', function(req, res) {
   res.json({ greeting: 'hello API' });
+});
+
+// Read the POST request
+app.post('/api/shorturl/new', function(req, res) {
+  res.json({ original_url: req.body.url });
 });
 
 /* 1. I can POST a URL to [project_url]/api/shorturl/new and I will receive a shortened URL in the JSON response. Example : {"original_url":"www.google.com","short_url":1}
@@ -42,16 +49,7 @@ app.get('/api/hello', function(req, res) {
  * - Check formal with the function dns.lookup(host, cb) from the dns core module
  *
  * 3. When I visit the shortened URL, it will redirect me to my original link.
- * - [this_project_url]/api/shorturl/3 will redirect to http://forum.freecodecamp.com
- *
- *
- * - Handle GET request with hardcoded value (handle the freecodecamp version)
- * - Handle POST request with hardcoded value (return random short_url in json format)
- * - Handle url verification - regexp / dns.lookup
- * - Get from mongoDB
- * - Write to mongoDB
- *
- **/
+ * - [this_project_url]/api/shorturl/3 will redirect to http://forum.freecodecamp.com */
 
 app.listen(port, function() {
   console.log('Node.js listening ...');
