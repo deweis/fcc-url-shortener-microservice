@@ -33,9 +33,17 @@ app.get('/api/hello', function(req, res) {
   res.json({ greeting: 'hello API' });
 });
 
+const urls = [{ original_url: 'www.google.com', short_url: 1 }];
+
 // Read the POST request
 app.post('/api/shorturl/new', function(req, res) {
-  res.json({ original_url: req.body.url });
+  const prvShort = urls[urls.length - 1].short_url;
+  const crntShort = prvShort + 1;
+  const result = { original_url: req.body.url, short_url: crntShort };
+
+  urls.push(result);
+
+  res.json(urls[urls.length - 1]);
 });
 
 /* 1. I can POST a URL to [project_url]/api/shorturl/new and I will receive a shortened URL in the JSON response. Example : {"original_url":"www.google.com","short_url":1}
