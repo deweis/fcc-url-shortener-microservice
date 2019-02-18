@@ -2,6 +2,7 @@
 
 var express = require('express');
 var bodyParser = require('body-parser');
+var dns = require('dns');
 var mongo = require('mongodb');
 var mongoose = require('mongoose');
 
@@ -37,20 +38,41 @@ let urls = [];
 
 // Read the POST request
 app.post('/api/shorturl/new', function(req, res) {
+  const errMsg = { error: 'invalid URL' };
   const regexp = /^(http(s?):\/\/(www\.){1}(\w+\.\w{2,}){1}(\.\w{2,}){0,2}(\/\w*)*)$/i;
 
+  // Check if the url matches a valid pattern
   if (!regexp.test(req.body.url)) {
-    const errMsg = { error: 'invalid URL' };
     return res.json(errMsg);
+  } else {
+    // lookup - but only works on 'www.google.com' but not on 'https://www.google.com'
+    // extract http(s)...
+    const reg = /^http(s?):\/\//i;
+    let str = req.body.url;
+
+    str = str.replace(reg, '');
+
+    // check if dns exists for the url
+    dns.lookup(str, function(err, addr) {
+      console.log('looking up: ', str);
+      if (err) {
+        console.log('lookup Error: ', err);
+        return res.json(errMsg);
+      } else {
+        // if url ok, add it to the db
+        console.log('lookup addr: ', addr);
+
+        const prvShort =
+          urls.length === 0 ? 0 : urls[urls.length - 1].short_url;
+        const crntShort = prvShort + 1;
+        const result = { original_url: req.body.url, short_url: crntShort };
+
+        urls.push(result);
+
+        return res.json(urls[urls.length - 1]);
+      }
+    });
   }
-
-  const prvShort = urls.length === 0 ? 0 : urls[urls.length - 1].short_url;
-  const crntShort = prvShort + 1;
-  const result = { original_url: req.body.url, short_url: crntShort };
-
-  urls.push(result);
-
-  res.json(urls[urls.length - 1]);
 });
 
 // handle short url
