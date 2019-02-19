@@ -15,8 +15,18 @@ var port = process.env.PORT || 3000;
 
 /** this project needs a db !! **/
 
-// mongoose.connect(process.env.MONGOLAB_URI);
+mongoose.connect(process.env.MONGO_URI);
 
+var Schema = mongoose.Schema;
+
+var shortUrlSchema = new Schema({
+  original_url: { type: String, required: true },
+  short_url: Number
+});
+
+var ShortUrl = mongoose.model('ShortUrl', shortUrlSchema);
+
+// use cors
 app.use(cors());
 
 /** this project needs to parse POST bodies **/
@@ -34,7 +44,9 @@ app.get('/api/hello', function(req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-let urls = [];
+function testAdd() {
+  console.log('test');
+}
 
 // Read the POST request
 app.post('/api/shorturl/new', function(req, res) {
@@ -45,8 +57,8 @@ app.post('/api/shorturl/new', function(req, res) {
   if (!regexp.test(req.body.url)) {
     return res.json(errMsg);
   } else {
-    // lookup - but only works on 'www.google.com' but not on 'https://www.google.com'
-    // extract http(s)...
+    // lookup Issue: but only works on 'www.google.com' but not on 'https://www.google.com'
+    // Solution: extract http(s)...
     const reg = /^http(s?):\/\//i;
     let str = req.body.url;
 
@@ -62,14 +74,46 @@ app.post('/api/shorturl/new', function(req, res) {
         // if url ok, add it to the db
         console.log('lookup addr: ', addr);
 
-        const prvShort =
-          urls.length === 0 ? 0 : urls[urls.length - 1].short_url;
-        const crntShort = prvShort + 1;
-        const result = { original_url: req.body.url, short_url: crntShort };
+        ShortUrl.find()
+          .sort({ short_url: -1 })
+          .limit(1)
+          .exec(function(err, doc) {
+            if (err) return console.error(err);
+            console.log('checking mongo');
 
-        urls.push(result);
+            if (doc[0]) {
+              console.log('mongo has entries', doc[0].short_url);
+              const url = doc[0].short_url + 1;
+              const toAdd = { original_url: req.body.url, short_url: url };
+              const newDoc = new ShortUrl(toAdd);
 
-        return res.json(urls[urls.length - 1]);
+              newDoc.save(function(err, theDoc) {
+                if (err) return console.error(err);
+                console.log(
+                  theDoc.original_url + ' saved to shortUrl collection.'
+                );
+                return res.json({
+                  original_url: theDoc.original_url,
+                  short_url: theDoc.short_url
+                });
+              });
+            } else {
+              console.log('mongo has no entries');
+              const toAdd = { original_url: req.body.url, short_url: 1 };
+              const newDoc = new ShortUrl(toAdd);
+
+              newDoc.save(function(err, theDoc) {
+                if (err) return console.error(err);
+                console.log(
+                  theDoc.original_url + ' saved to shortUrl collection.'
+                );
+                return res.json({
+                  original_url: theDoc.original_url,
+                  short_url: theDoc.short_url
+                });
+              });
+            }
+          });
       }
     });
   }
@@ -77,10 +121,15 @@ app.post('/api/shorturl/new', function(req, res) {
 
 // handle short url
 app.get('/api/shorturl/:short_url', function(req, res) {
-  const resUrl = urls.find(x => x.short_url === Number(req.params.short_url));
-  //res.json({ short_url: req.params.short_url, original_url: resUrl.original_url });
-
-  res.redirect(resUrl.original_url);
+  ShortUrl.find({ short_url: Number(req.params.short_url) }, function(
+    err,
+    data
+  ) {
+    console.log('mongoDb lookup: ', req.params.short_url);
+    if (err) return console.error(err);
+    console.log('mongoDb result: ', data);
+    return res.redirect(data[0].original_url);
+  });
 });
 
 /* 1. I can POST a URL to [project_url]/api/shorturl/new and I will receive a shortened URL in the JSON response. Example : {"original_url":"www.google.com","short_url":1}
