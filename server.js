@@ -70,6 +70,7 @@ app.post('/api/shorturl/new', function(req, res) {
         // if url ok, add it to the db
         console.log('lookup addr: ', addr);
 
+        // get the max short_url from the db
         ShortUrl.find()
           .sort({ short_url: -1 })
           .limit(1)
@@ -94,7 +95,7 @@ app.post('/api/shorturl/new', function(req, res) {
   }
 });
 
-// handle short url
+// Redirect the short url to the original url when requeste
 app.get('/api/shorturl/:short_url', function(req, res) {
   ShortUrl.find({ short_url: Number(req.params.short_url) }, function(
     err,
@@ -106,19 +107,6 @@ app.get('/api/shorturl/:short_url', function(req, res) {
     return res.redirect(data[0].original_url);
   });
 });
-
-/* 1. I can POST a URL to [project_url]/api/shorturl/new and I will receive a shortened URL in the JSON response. Example : {"original_url":"www.google.com","short_url":1}
- * - Handle POST request: POST [project_url]/api/shorturl/new - body (urlencoded): url=https://www.google.com
- * - Generate short_url
- * - TBD: Store short_url and original link in mongoDB - {"original_url":"www.google.com","short_url":1}
- * - Return short_url in the JSON response. Example : {"original_url":"www.google.com","short_url":1}
- *
- * 2. Check if url is valid
- * - TBD: Check format with regexp
- * - TBD: Check formal with the function dns.lookup(host, cb) from the dns core module
- *
- * 3. When I visit the shortened URL, it will redirect me to my original link.
- * - [this_project_url]/api/shorturl/3 will redirect to http://forum.freecodecamp.com */
 
 app.listen(port, function() {
   console.log('Node.js listening ...');
