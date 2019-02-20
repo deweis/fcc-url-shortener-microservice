@@ -44,10 +44,6 @@ app.get('/api/hello', function(req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-function testAdd() {
-  console.log('test');
-}
-
 // Read the POST request
 app.post('/api/shorturl/new', function(req, res) {
   const errMsg = { error: 'invalid URL' };
@@ -79,40 +75,19 @@ app.post('/api/shorturl/new', function(req, res) {
           .limit(1)
           .exec(function(err, doc) {
             if (err) return console.error(err);
-            console.log('checking mongo');
 
-            if (doc[0]) {
-              console.log('mongo has entries', doc[0].short_url);
-              const url = doc[0].short_url + 1;
-              const toAdd = { original_url: req.body.url, short_url: url };
-              const newDoc = new ShortUrl(toAdd);
+            const short_url = doc[0] ? doc[0].short_url + 1 : 1;
+            const to_db = { original_url: req.body.url, short_url: short_url };
+            const new_doc = new ShortUrl(to_db);
 
-              newDoc.save(function(err, theDoc) {
-                if (err) return console.error(err);
-                console.log(
-                  theDoc.original_url + ' saved to shortUrl collection.'
-                );
-                return res.json({
-                  original_url: theDoc.original_url,
-                  short_url: theDoc.short_url
-                });
+            new_doc.save(function(err, doc) {
+              if (err) return console.error(err);
+              console.log(doc.original_url + ' saved to shortUrl collection.');
+              return res.json({
+                original_url: doc.original_url,
+                short_url: doc.short_url
               });
-            } else {
-              console.log('mongo has no entries');
-              const toAdd = { original_url: req.body.url, short_url: 1 };
-              const newDoc = new ShortUrl(toAdd);
-
-              newDoc.save(function(err, theDoc) {
-                if (err) return console.error(err);
-                console.log(
-                  theDoc.original_url + ' saved to shortUrl collection.'
-                );
-                return res.json({
-                  original_url: theDoc.original_url,
-                  short_url: theDoc.short_url
-                });
-              });
-            }
+            });
           });
       }
     });
